@@ -1,4 +1,7 @@
 package therooster.jrtools.dto;
 
-public record ReportRequest() {
+import java.util.Map;
+
+
+public record ReportRequest(String tag, Map<String, Object> parameters, Map<String, Object> datasource) {
 }

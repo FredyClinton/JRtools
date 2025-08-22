@@ -1,4 +1,4 @@
 package therooster.jrtools.dto;
 
-public class TemplateUploadResponse {
+public record TemplateUploadResponse(String tag, String description) {
 }
