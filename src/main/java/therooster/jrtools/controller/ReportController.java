@@ -1,9 +1,7 @@
 package therooster.jrtools.controller;
 
 import lombok.RequiredArgsConstructor;
-
 import net.sf.jasperreports.engine.JRException;
-import net.sf.jasperreports.engine.data.JRMapCollectionDataSource;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
@@ -12,37 +10,35 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
 import therooster.jrtools.dto.ReportDataRequest;
-import therooster.jrtools.dto.ReportRequest;
-import therooster.jrtools.entity.ReportTemplate;
 import therooster.jrtools.service.impl.ReportServiceImpl;
+
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.Map;
 
 @RestController
-@RequestMapping("/api/templates")
+@RequestMapping("/api")
 @RequiredArgsConstructor
 public class ReportController {
     private final ReportServiceImpl reportService;
 
 
     @Value("${app.template.dir}")
-    private  String templateDir ;
+    private String templateDir;
+    @Value("${app.report.dir}")
+    private String reportsDirectory;
 
-    @PostMapping("/upload")
+    @PostMapping("/templates/upload")
     public ResponseEntity<?> upload(
             @RequestParam String tag,
             @RequestParam String description,
             @RequestParam("file") MultipartFile file,
             UriComponentsBuilder ucb)
-    throws IOException {
+            throws IOException {
 
 
         var body = this.reportService.uploadTemplate(tag, description, file);
@@ -50,23 +46,23 @@ public class ReportController {
                 .path("api/templates/download/{tag}")
                 .buildAndExpand(tag)
                 .toUri();
-        return  ResponseEntity.created(templateUri)
+        return ResponseEntity.created(templateUri)
                 .body(body);
 
     }
 
 
-    @PutMapping("/{tag}")
+    @PutMapping("/templates/{tag}")
     public ResponseEntity<?> updateTemplate(
             @PathVariable String tag,
             @RequestParam String description,
             @RequestParam MultipartFile file
     ) throws Exception {
-        return ResponseEntity.ok(this.reportService.updateTemplate(tag,description, file));
+        return ResponseEntity.ok(this.reportService.updateTemplate(tag, description, file));
     }
 
 
-    @DeleteMapping("/{tag}")
+    @DeleteMapping("/templates/{tag}")
     public ResponseEntity<?> deleteTemplate(@PathVariable String tag) {
         this.reportService.deleteTemplate(tag);
         return ResponseEntity.ok("Template supprimé avec succès");
@@ -90,41 +86,60 @@ public class ReportController {
     */
 
 
-
-
-    @GetMapping("/download/{tag}")
+    @GetMapping("/templates/download/{tag}")
     public ResponseEntity<Resource> downloadTemplate(@PathVariable String tag) throws IOException {
 
-           Path filePath = Paths.get(templateDir, tag + ".jrxml"); // ou .jrxml
-            if (!Files.exists(filePath.toAbsolutePath())) {
-
-
-                return ResponseEntity.notFound().build();
-            }
-
-            Resource resource = new FileSystemResource(filePath.toAbsolutePath().toFile());
-
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filePath.getFileName() + "\"")
-                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                    .body(resource);
-
-    }
-
-    @PostMapping("/generate/{tag}")
-    public ResponseEntity<?> test(@RequestBody ReportDataRequest params, @PathVariable String tag) throws JRException {
-
-        byte[] pdf = this.reportService.generateReportWithDto(params, tag);
-        System.out.println(Arrays.toString(pdf));
+        Path filePath = Paths.get(templateDir, tag + ".jrxml"); // ou .jrxml
+        Resource resource = getResourceResponseEntity(filePath);
 
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachement; filename=" + tag + ".pdf")
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filePath.getFileName() + "\"")
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(resource);
+
+    }
+
+    private Resource getResourceResponseEntity(Path filePath) {
+        if (!Files.exists(filePath.toAbsolutePath())) {
+
+
+            return null;
+        }
+
+        return new FileSystemResource(filePath.toAbsolutePath().toFile());
+
+
+    }
+
+    @PostMapping("/report/generate/{tag}")
+    public ResponseEntity<String> generateReport(@RequestBody ReportDataRequest params, @PathVariable String tag) throws JRException {
+
+        boolean pdfCreatedAndSaved = this.reportService.generateReportWithDto(params, tag);
+
+        if (!pdfCreatedAndSaved) {
+            return ResponseEntity.internalServerError().build();
+        }
+
+        return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_PDF)
-                .body(pdf);
+                .body("rapport generé avec succes");
     }
 
 
+    @GetMapping("/report/download/{tag}")
+    public ResponseEntity<Resource> downloadReport(@PathVariable String tag) throws IOException {
 
+        Path filePath = Paths.get(reportsDirectory, tag + ".pdf"); // ou .jrxml
+
+
+        Resource resource = getResourceResponseEntity(filePath);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filePath.getFileName() + "\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(resource);
+
+    }
 
 
 }

@@ -5,45 +5,49 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
-
 import net.sf.jasperreports.engine.*;
-
 import net.sf.jasperreports.engine.data.JRMapCollectionDataSource;
 import net.sf.jasperreports.engine.util.JRLoader;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-
 import therooster.jrtools.dto.ReportDataRequest;
 import therooster.jrtools.entity.ReportTemplate;
 import therooster.jrtools.exception.TemplateNotFoundException;
 import therooster.jrtools.repository.TemplateRepository;
 import therooster.jrtools.service.ReportService;
 
-
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.rmi.RemoteException;
-
-
 import java.util.*;
 
 @RequiredArgsConstructor
 @Service
-public class ReportServiceImpl    implements ReportService {
+public class ReportServiceImpl implements ReportService {
     private final TemplateRepository templateRepository;
 
     @Value("${app.template.dir}")
-    private  String templateDir ;
+    private String templateDir;
+
+    @Value("${app.report.dir}")
+    private String reportDir;
+
+
     @Override
     public ReportTemplate updateTemplate(String tag, String description, MultipartFile newFile) throws IOException {
 
         ReportTemplate saveTemplate = this.templateRepository.findByTag(tag)
-                .orElseThrow(() -> new TemplateNotFoundException("template with name " +tag + " not found"));
+                .orElseThrow(() -> new TemplateNotFoundException("template with name " + tag + " not found"));
 
         String filePath = templateDir + tag + getExtension(Objects.requireNonNull(newFile.getOriginalFilename()));
-       // TODO : Controller les informations fournis
+        // TODO : Controller les informations fournis
 
         saveTemplate.setDescription(description);
         saveTemplate.setTag(tag);
@@ -53,16 +57,15 @@ public class ReportServiceImpl    implements ReportService {
     }
 
 
-
     @Override
     public ReportTemplate uploadTemplate(String tag, String description, MultipartFile file) throws IOException {
-        if (templateRepository.existsByTag(tag)){
-            throw  new RemoteException("template with this name already exists");
+        if (templateRepository.existsByTag(tag)) {
+            throw new RemoteException("template with this name already exists");
         }
 
         // creer un dossier
         File dir = new File(templateDir);
-        if (!dir.exists()){
+        if (!dir.exists()) {
             dir.mkdirs();
         }
 
@@ -76,7 +79,7 @@ public class ReportServiceImpl    implements ReportService {
         file.transferTo(destination.getAbsoluteFile());
 
         //System.out.println(destination.getAbsolutePath());
-       // file.transferTo(destination.getAbsoluteFile());
+        // file.transferTo(destination.getAbsoluteFile());
 
         // sauvegarde en BD
 
@@ -91,7 +94,7 @@ public class ReportServiceImpl    implements ReportService {
     @Override
     public void deleteTemplate(String tag) {
         ReportTemplate saveTemplate = this.templateRepository.findByTag(tag)
-                .orElseThrow(() -> new TemplateNotFoundException("template with name " +tag + " not found"));
+                .orElseThrow(() -> new TemplateNotFoundException("template with name " + tag + " not found"));
 
         new File(saveTemplate.getDirectory()).delete();
         // TODO : Gestion d'ereeurs
@@ -100,7 +103,7 @@ public class ReportServiceImpl    implements ReportService {
     }
 
 
-    private Map<String, Object> getParamsAndDataSourceFromJson(String jsonInput ) throws JsonProcessingException {
+    private Map<String, Object> getParamsAndDataSourceFromJson(String jsonInput) throws JsonProcessingException {
         // Parser le JSON
         ObjectMapper mapper = new ObjectMapper();
         JsonNode root = mapper.readTree(jsonInput);
@@ -108,14 +111,14 @@ public class ReportServiceImpl    implements ReportService {
         // Paramètres simples
         Map<String, Object> parameters = new HashMap<>();
         // les fieds qui sont des datasuorces
-        List<String>  champsDatasources = new ArrayList<>();
+        List<String> champsDatasources = new ArrayList<>();
         root.fieldNames().forEachRemaining(field -> {
             JsonNode node = root.get(field);
             if (!node.isArray()) { // si ce n'est pas une collection
                 parameters.put(field, node.asText());
             }
 
-            if(node.isArray()){
+            if (node.isArray()) {
                 champsDatasources.add(field);
             }
         });
@@ -145,26 +148,24 @@ public class ReportServiceImpl    implements ReportService {
         // Ajouter les datasources aux paramètres
         parameters.putAll(dataSources);
 
-        return  parameters;
+        return parameters;
     }
-    
 
 
     @Override
-    public byte[] generateReportWithDto(ReportDataRequest reportData, String tag) throws JRException {
+    public boolean generateReportWithDto(ReportDataRequest reportData, String tag) throws JRException {
         ReportTemplate template = this.templateRepository.findByTag(tag)
-                .orElseThrow(() -> new TemplateNotFoundException("template with name " +tag + " not found"));
+                .orElseThrow(() -> new TemplateNotFoundException("template with name " + tag + " not found"));
         String templatePath = template.getDirectory();
 
 
         JasperReport jasperReport = null;
-        if(getExtension(templatePath).contains("jrxml")){
+        if (getExtension(templatePath).contains("jrxml")) {
             jasperReport = JasperCompileManager.compileReport(templatePath);
-            System.out.println("Chargement du template" +  templatePath);
-        }
-        else {
+            System.out.println("Chargement du template" + templatePath);
+        } else {
             jasperReport = (JasperReport) JRLoader.loadObject(new File(templatePath));
-            System.out.println("Chargement du template" +  templatePath);
+            System.out.println("Chargement du template" + templatePath);
         }
 
         // Récupération des paramètres simples pour le rapport
@@ -193,9 +194,49 @@ public class ReportServiceImpl    implements ReportService {
 
         System.out.println("Exportation du rapport");
         byte[] pdfBytes = JasperExportManager.exportReportToPdf(jasperPrint);
-        return  pdfBytes;
+
+        // Save
+
+        try {
+
+            // Créer le dossier s'il n'existe pas
+            File directory = new File(reportDir);
+            if (!directory.exists()) {
+                directory.mkdirs();
+            }
+
+            // Chemin complet du fichier
+            String filePath = reportDir + tag + ".pdf";
+
+            // Écrire le fichier
+            try (FileOutputStream fos = new FileOutputStream(filePath)) {
+                fos.write(pdfBytes);
+            }
+
+            System.out.println("Rapport sauvegardé : " + filePath);
+
+            return true;
+
+        } catch (Exception e) {
+            throw new RuntimeException("Erreur lors de la sauvegarde du rapport", e);
+        }
+
 
     }
+
+
+    public Resource getDocument(Path filePath) {
+
+        //Path file = Paths.get(filePath); // ou .jrxml
+        if (!Files.exists(filePath.toAbsolutePath())) {
+
+
+            throw new RuntimeException("File not found");
+        }
+
+        return new FileSystemResource(filePath.toAbsolutePath().toFile());
+    }
+
 
     /*
     @Override
