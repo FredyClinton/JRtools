@@ -19,7 +19,7 @@ public interface ReportService {
 
     public default String getExtension(String originlaFilename) {
         if (!originlaFilename.contains(".")) {
-            throw new RuntimeException("Invalid filename format");
+            throw new RuntimeException("Invalid filename  format");
         }
         return originlaFilename.substring(originlaFilename.lastIndexOf("."));
     }
