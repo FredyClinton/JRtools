@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.util.UriComponentsBuilder;
 import therooster.jrtools.dto.ReportDataRequest;
+import therooster.jrtools.entity.ReportTemplate;
 import therooster.jrtools.service.impl.ReportServiceImpl;
 
 import java.io.IOException;
@@ -19,6 +20,7 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api")
@@ -55,7 +57,7 @@ public class ReportController {
             @PathVariable String tag,
             @RequestParam String description,
             @RequestParam MultipartFile file
-    ) throws Exception {
+    ) {
         return ResponseEntity.ok(this.reportService.updateTemplate(tag, description, file));
     }
 
@@ -116,6 +118,12 @@ public class ReportController {
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
                 .body(resource);
 
+    }
+
+    @GetMapping("/templates")
+    public ResponseEntity<List<ReportTemplate>> listTemplates() {
+        List<ReportTemplate> templates = reportService.findAllTemplates();
+        return ResponseEntity.ok(templates);
     }
 
 
