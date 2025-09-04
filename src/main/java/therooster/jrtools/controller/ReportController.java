@@ -40,7 +40,6 @@ public class ReportController {
             UriComponentsBuilder ucb)
             throws IOException {
 
-
         var body = this.reportService.uploadTemplate(tag, description, file);
         URI templateUri = ucb
                 .path("api/templates/download/{tag}")
@@ -48,7 +47,6 @@ public class ReportController {
                 .toUri();
         return ResponseEntity.created(templateUri)
                 .body(body);
-
     }
 
 
@@ -69,47 +67,13 @@ public class ReportController {
     }
 
 
-    /*
-    @PostMapping("/generate/{tag}")
-    public ResponseEntity<?> generateReport(
-            @PathVariable String tag,
-            @RequestBody String params
-    ) throws Exception {
-        byte[] pdf = this.reportService.generateReport(tag, params);
-        System.out.println(Arrays.toString(pdf));
-
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachement; filename=" + tag + ".pdf")
-                .contentType(MediaType.APPLICATION_PDF)
-                .body(pdf);
-    }
-    */
-
-
-    @GetMapping("/templates/download/{tag}")
-    public ResponseEntity<Resource> downloadTemplate(@PathVariable String tag) throws IOException {
-
-        Path filePath = Paths.get(templateDir, tag + ".jrxml"); // ou .jrxml
-        Resource resource = getResourceResponseEntity(filePath);
-
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filePath.getFileName() + "\"")
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .body(resource);
-
-    }
-
     private Resource getResourceResponseEntity(Path filePath) {
         if (!Files.exists(filePath.toAbsolutePath())) {
-
-
             return null;
         }
-
         return new FileSystemResource(filePath.toAbsolutePath().toFile());
-
-
     }
+
 
     @PostMapping("/report/generate/{tag}")
     public ResponseEntity<String> generateReport(@RequestBody ReportDataRequest params, @PathVariable String tag) throws JRException {
@@ -127,7 +91,7 @@ public class ReportController {
 
 
     @GetMapping("/report/download/{tag}")
-    public ResponseEntity<Resource> downloadReport(@PathVariable String tag) throws IOException {
+    public ResponseEntity<Resource> downloadReport(@PathVariable String tag) {
 
         Path filePath = Paths.get(reportsDirectory, tag + ".pdf"); // ou .jrxml
 
@@ -137,6 +101,19 @@ public class ReportController {
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filePath.getFileName() + "\"")
                 .contentType(MediaType.APPLICATION_PDF)
+                .body(resource);
+
+    }
+
+    @GetMapping("/templates/download/{tag}")
+    public ResponseEntity<Resource> downloadTemplate(@PathVariable String tag) {
+
+        Path filePath = Paths.get(templateDir, tag + ".jrxml"); // ou .jrxml
+        Resource resource = getResourceResponseEntity(filePath);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filePath.getFileName() + "\"")
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
                 .body(resource);
 
     }

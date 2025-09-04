@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
-import lombok.NoArgsConstructor;
 
 import java.util.HashMap;
 import java.util.List;
@@ -12,10 +11,10 @@ import java.util.Map;
 
 @AllArgsConstructor
 public class ReportDataRequest {
-    private Map<String, Object> parameters ;
-    private Map<String, List<Map<String, ?>>> dataSources ;
+    private Map<String, Object> parameters;
+    private Map<String, List<Map<String, ?>>> dataSources;
 
-    public  ReportDataRequest() {
+    public ReportDataRequest() {
         parameters = new HashMap<>();
         dataSources = new HashMap<>();
     }
@@ -28,6 +27,7 @@ public class ReportDataRequest {
         if (value instanceof List) {
 
             dataSources.put(key, (List<Map<String, ?>>) value);
+            //parameters.put(key, value);
         } else {
             // Sinon, c'est un paramètre simple
             parameters.put(key, value);
