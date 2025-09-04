@@ -15,7 +15,7 @@ public class SwaggerConfig {
     public OpenAPI customOpenAPI() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("Mon API de gestion des avis")
+                        .title("API De reporting")
                         .version("1.0")
                         .description("Documentation de l'API avec Springdoc OpenAPI"));
     }

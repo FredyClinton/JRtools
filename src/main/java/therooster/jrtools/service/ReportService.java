@@ -10,14 +10,14 @@ import java.io.IOException;
 
 public interface ReportService {
 
-    public ReportTemplate uploadTemplate(String tag, String description, MultipartFile file) throws IOException;
+    ReportTemplate uploadTemplate(String tag, String description, MultipartFile file) throws IOException;
 
-    public ReportTemplate updateTemplate(String tag, String description, MultipartFile file) throws IOException;
+    ReportTemplate updateTemplate(String tag, String description, MultipartFile file) throws IOException;
 
-    public void deleteTemplate(String tag);
+    void deleteTemplate(String tag);
 
 
-    public default String getExtension(String originlaFilename) {
+    default String getExtension(String originlaFilename) {
         if (!originlaFilename.contains(".")) {
             throw new RuntimeException("Invalid filename  format");
         }
