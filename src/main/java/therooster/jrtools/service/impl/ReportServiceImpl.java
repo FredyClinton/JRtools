@@ -64,7 +64,6 @@ public class ReportServiceImpl implements ReportService {
                 .orElseThrow(() -> new TemplateNotFoundException("template with name " + tag + " not found"));
 
         String filePath = templateDir + tag + getExtension(Objects.requireNonNull(newFile.getOriginalFilename()));
-        // TODO : Controller les informations fournis
 
         saveTemplate.setDescription(description);
         saveTemplate.setTag(tag);
@@ -111,7 +110,7 @@ public class ReportServiceImpl implements ReportService {
                 .orElseThrow(() -> new TemplateNotFoundException("template with name " + tag + " not found"));
 
         new File(saveTemplate.getDirectory()).delete();
-        // TODO : Gestion d'erreurs
+
         this.templateRepository.delete(saveTemplate);
 
     }
@@ -169,6 +168,11 @@ public class ReportServiceImpl implements ReportService {
         }
 
 
+    }
+
+    @Override
+    public List<ReportTemplate> findAllTemplates() {
+        return this.templateRepository.findAll();
     }
 
 

@@ -7,6 +7,7 @@ import therooster.jrtools.dto.ReportDataRequest;
 import therooster.jrtools.entity.ReportTemplate;
 
 import java.io.IOException;
+import java.util.List;
 
 public interface ReportService {
 
@@ -27,5 +28,5 @@ public interface ReportService {
     boolean generateReportWithDto(ReportDataRequest reportData, String tag) throws JRException;
 
 
-    // byte[] generateReport(String tag, JsonNode params) throws IOException, JRException;
+    List<ReportTemplate> findAllTemplates();
 }
